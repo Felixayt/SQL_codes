@@ -143,4 +143,92 @@ WHERE DATE_TRUNC('month', occurred_at) =
    SELECT SUM(total_amt_usd)
 FROM orders
 WHERE DATE_TRUNC('month', occurred_at) = 
-      (SELECT DATE_TRUNC('month', MIN(occurred_at)) FROM orders);               
+      (SELECT DATE_TRUNC('month', MIN(occurred_at)) FROM orders);      
+17.0
+
+WITH dept_average AS 
+  (SELECT dept, AVG(salary) AS avg_dept_salary
+   FROM employee
+   GROUP BY employee.dept
+  )
+SELECT E.eid, E.ename, D.avg_dept_salary
+FROM employee E
+JOIN dept.average D
+ON E.dept = D.dept
+WHERE E.salary > D.avg_dept_salary  
+
+18.0-- 
+SELECT employee_id,
+       name
+FROM employees_db emp
+WHERE salary > 
+      (SELECT AVG(salary)
+       FROM employees_db
+       WHERE department = emp.department); 
+
+19.0 
+
+SELECT first_name, last_name, GPA, university
+ FROM student_db outer_db
+ WHERE GPA >
+                (SELECT AVG(GPA)
+                 FROM student_db
+                 WHERE university = outer_db.university);       
+      
+20.0-- What is the top channel used by each account to market products?
+How often was that same channel used?
+
+However, we will need to do two aggregations and two subqueries to make this happen.
+
+Let's find the number of times each channel is used by each account.
+
+So we will need to count the number of rows by Account and Channel. This count will be our first aggregation needed.*/
+
+--STEP 1
+
+SELECT accounts.name, web_events.channel, Count(*)
+FROM accounts
+JOIN web_events ON accounts.id = Web_events.account_id
+GROUP BY 1, 2
+ORDER BY 1,3;
+
+--STEP 2
+
+SELECT T1.name, Max(T1.count)
+FROM (
+       SELECT accounts.name as name, web_events.channel as channel, Count(*) as count
+       FROM accounts
+       JOIN web_events ON accounts.id = Web_events.account_id
+       GROUP BY 1, 2
+       ORDER BY 1,3
+) as T1
+GROUP BY 1
+
+--STEP 3
+
+SELECT T1.name,Web_events, MAX(T1.count)
+FROM (SELECT accounts.name, web_events.channel, Count(*)
+FROM accounts
+JOIN web_events ON accounts.id = Web_events.account_id
+GROUP BY 1, 2
+ORDER BY 1,3) T1
+WHERE 
+GROUP BY 1;
+
+--STEP 4
+
+SELECT t3.id, t3.name, t3.channel, t3.ct
+FROM (SELECT a.id, a.name, we.channel, COUNT(*) ct
+     FROM accounts a
+     JOIN web_events we
+     On a.id = we.account_id
+     GROUP BY a.id, a.name, we.channel) T3
+JOIN (SELECT t1.id, t1.name, MAX(ct) max_chan
+      FROM (SELECT a.id, a.name, we.channel, COUNT(*) ct
+            FROM accounts a
+            JOIN web_events we
+            ON a.id = we.account_id
+            GROUP BY a.id, a.name, we.channel) t1
+      GROUP BY t1.id, t1.name) t2
+ON t2.id = t3.id AND t2.max_chan = t3.ct
+ORDER BY t3.id;            
